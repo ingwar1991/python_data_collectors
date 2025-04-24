@@ -1,0 +1,22 @@
+<fieldset>
+    <legend>Order by</legend>
+
+    <label for="order_by">Order by:</label>
+    <select name="order_by">
+        <option value="">-- Choose field --</option>
+        <option value="source" {% if request_params.get('order_by') == 'source' %}selected{% endif %}>Source</option>
+        <option value="ip" {% if request_params.get('order_by') == 'ip' %}selected{% endif %}>IP</option>
+        <option value="mac" {% if request_params.get('order_by') == 'mac' %}selected{% endif %}>MAC</option>
+        <option value="os" {% if request_params.get('order_by') == 'os' %}selected{% endif %}>OS</option>
+        <option value="os_version" {% if request_params.get('order_by') == 'os_version' %}selected{% endif %}>OS Version</option>
+        <option value="name" {% if request_params.get('order_by') == 'name' %}selected{% endif %}>Hostname</option>
+        <option value="first_seen" {% if request_params.get('order_by') == 'first_seen' %}selected{% endif %}>First Seen</option>
+        <option value="last_seen" {% if request_params.get('order_by') == 'last_seen' %}selected{% endif %}>Last Seen</option>
+    </select>
+
+    <label for="order_dir">Direction:</label>
+    <select name="order_dir">
+        <option value="asc" {% if request_params.get('order_dir') == 'asc' %}selected{% endif %}>Ascending</option>
+        <option value="desc" {% if request_params.get('order_dir') == 'desc' %}selected{% endif %}>Descending</option>
+    </select>
+</fieldset>

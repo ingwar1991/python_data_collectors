@@ -1,0 +1,23 @@
+<table border="1">
+    <thead>
+        <tr>
+            <th>Source</th>
+            <th>IP</th>
+            <th>MAC Address</th>
+            <th>OS</th>
+            <th>OS Version</th>
+            <th>Name</th>
+            <th>First Seen</th>
+            <th>Last Seen</th>
+            {% if request_params.get('show_raw') %}
+                <th>Raw</th>
+            {% endif %} 
+        </tr>
+    </thead>
+
+    {% if request_params.get('view_type', 'all') == 'all' %}
+        {% include "table/body_all.html" %}
+    {% else %}
+        {% include "table/body_grouped.html" %}
+    {% endif %}
+</table>

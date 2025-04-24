@@ -1,0 +1,122 @@
+services:
+  data_collectors_redis:
+    image: redis:alpine 
+    networks: 
+      - data_collectors_net
+  data_collectors_worker1:
+    build: ./python
+    networks: 
+      - data_collectors_net
+    depends_on:
+      - data_collectors_mongo
+      - data_collectors_redis
+    volumes:
+      - ./../project/app/collectors:/var/www/project/app/collectors
+      - ./../project/app/db:/var/www/project/app/db
+      - ./../project/startWorker.sh:/var/www/project/startWorker.sh
+    environment:
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_USER_PASS: ${MONGO_USER_PASS}
+    working_dir: /var/www/project
+    command: ./startWorker.sh  
+#    command: tail -F anything
+  data_collectors_worker2:
+    build: ./python
+    networks: 
+      - data_collectors_net
+    depends_on:
+      - data_collectors_mongo
+      - data_collectors_redis
+    volumes:
+      - ./../project/app/collectors:/var/www/project/app/collectors
+      - ./../project/app/db:/var/www/project/app/db
+      - ./../project/startWorker.sh:/var/www/project/startWorker.sh
+    environment:
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_USER_PASS: ${MONGO_USER_PASS}
+    working_dir: /var/www/project
+#    command: celery -A app.collectors.worker worker --loglevel=info
+    command: ./startWorker.sh  
+#    command: tail -F anything
+  data_collectors_worker3:
+    build: ./python
+    networks: 
+      - data_collectors_net
+    depends_on:
+      - data_collectors_mongo
+      - data_collectors_redis
+    volumes:
+      - ./../project/app/collectors:/var/www/project/app/collectors
+      - ./../project/app/db:/var/www/project/app/db
+      - ./../project/startWorker.sh:/var/www/project/startWorker.sh
+    environment:
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_USER_PASS: ${MONGO_USER_PASS}
+    working_dir: /var/www/project
+#    command: celery -A app.collectors.worker worker --loglevel=info
+    command: ./startWorker.sh  
+#    command: tail -F anything
+  data_collectors_mongo:
+    build:
+      context: mongo
+      args:
+        MONGO_DB_NAME: ${MONGO_DB_NAME}
+        MONGO_PORT: ${MONGO_PORT}
+        MONGO_USER: ${MONGO_USER}
+        MONGO_USER_PASS: ${MONGO_USER_PASS}
+    networks:
+      - data_collectors_net
+    ports:
+      - ${MONGO_PORT}:${MONGO_PORT}
+    command: ["--port", "${MONGO_PORT}"]
+#    command: tail -F anything
+  data_collectors_collectors:
+    build: ./python
+    networks: 
+      - data_collectors_net
+    depends_on:
+      - data_collectors_mongo
+      - data_collectors_redis
+    volumes:
+      - ./../project/tests:/var/www/project/tests
+      - ./../project/app/collectors:/var/www/project/app/collectors
+      - ./../project/app/db:/var/www/project/app/db
+      - ./../project/runTests.sh:/var/www/project/runTests.sh
+      - ./../project/registerJobs.sh:/var/www/project/registerJobs.sh
+    environment:
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_USER_PASS: ${MONGO_USER_PASS}
+    working_dir: /var/www/project
+    command: ./registerJobs.sh 
+#    command: tail -F anything
+  data_collectors_front:
+    build: ./python
+    networks: 
+      - data_collectors_net
+    depends_on:
+      - data_collectors_mongo
+    ports:
+      - ${FRONT_PORT}:${FRONT_PORT}
+    volumes:
+      - ./../project/app/front:/var/www/project/app/front
+      - ./../project/app/db:/var/www/project/app/db
+    environment:
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_USER_PASS: ${MONGO_USER_PASS}
+      FRONT_PORT: ${FRONT_PORT}
+    working_dir: /var/www/project
+    command: "python -m app.front.main"
+
+networks:
+  data_collectors_net:
+    driver: bridge

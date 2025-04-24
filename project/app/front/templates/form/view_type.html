@@ -1,0 +1,21 @@
+<fieldset>
+    <legend>View Type</legend>
+    
+    <label for="show_raw">Show Raw:</label>
+    <input
+      type="checkbox" name="show_raw" value="1" onchange="this.form.submit()"
+      {% if request_params.get('show_raw') %}checked="checked"{% endif %}
+    />
+
+    <br/><br/>
+
+    <input type="radio" name="view_type" value="all" onchange="this.form.submit()"
+      {% if request_params.get('view_type', 'all') == 'all' %}checked="checked"{% endif %}'>
+        All 
+    </input>
+
+    <input type="radio" name="view_type" value="grouped" onchange="this.form.submit()"
+      {% if request_params.get('view_type') == 'grouped' %}checked="checked"{% endif %}'>
+        Grouped 
+    </input>
+</fieldset>
