@@ -1,0 +1,6 @@
+vendor_name: crowdstrike
+auth_type: token
+endpoint: 'crowdstrike/hosts/get'
+http_method: post
+response_type: json 
+limit: 2 

@@ -1,0 +1,14 @@
+<form method="get" action="/">
+    {% include "form/filter.html" %}
+
+    {% include "form/order.html" %}
+
+    <fieldset>
+        <button type="submit">Apply Filters</button>
+        <a href="/">Reset</a>
+    </fieldset>
+
+    {% if not request_params.get('source') %}
+        {% include "form/view_type.html" %}
+    {% endif %}
+</form>

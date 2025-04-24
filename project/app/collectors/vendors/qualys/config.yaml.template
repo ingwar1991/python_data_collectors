@@ -1,0 +1,8 @@
+vendor_name: qualys 
+auth_type: token
+token: 
+base_url: 
+endpoint: 'qualys/hosts/get'
+http_method: post
+response_type: json 
+limit: 2 

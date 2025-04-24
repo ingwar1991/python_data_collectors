@@ -1,0 +1,46 @@
+<fieldset>
+    <legend>Filter Hosts</legend>
+
+    {% if request_params.get('view_type', 'all') == 'all' %}
+        <label for="source">Source:</label>
+        <select name="source" id="source">
+            <option value="">-- All --</option>
+            {% for source_option in hosts | map(attribute='source') | unique %}
+                <option value="{{ source_option }}"
+                    {% if request_params.get('source') == source_option %}selected{% endif %}>
+                    {{ source_option }}
+                </option>
+            {% endfor %}
+        </select>
+        <br/><br/>
+    {% endif %}
+
+    <label for="ip">IP:</label>
+    <input type="text" name="ip" value="{{ request_params.get('ip', '') }}">
+
+    <label for="mac">MAC:</label>
+    <input type="text" name="mac" value="{{ request_params.get('mac', '') }}">
+
+    <br/><br/>
+
+    <label for="os">OS:</label>
+    <input type="text" name="os" value="{{ request_params.get('os', '') }}">
+
+    <label for="os_version">OS Version:</label>
+    <input type="text" name="os_version" value="{{ request_params.get('os_version', '') }}">
+
+    <br/><br/>
+
+    <label for="name">Hostname:</label>
+    <input type="text" name="name" value="{{ request_params.get('name', '') }}">
+
+    <br/><br/>
+
+    <label for="first_seen">First Seen (from):</label>
+    <input type="date" name="first_seen" value="{{ request_params.get('first_seen', '') }}">
+
+    <label for="last_seen">Last Seen (until):</label>
+    <input type="date" name="last_seen" value="{{ request_params.get('last_seen', '') }}">
+
+    <br/><br/>
+</fieldset>

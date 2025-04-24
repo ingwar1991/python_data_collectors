@@ -1,0 +1,17 @@
+<tbody>
+    {% for host in hosts %}
+        <tr>
+            <td>{{ host.source }}</td>
+            <td>{{ host.ip }}</td>
+            <td>{{ host.mac }}</td>
+            <td>{{ host.os }}</td>
+            <td>{{ host.os_version }}</td>
+            <td>{{ host.name }}</td>
+            <td>{{ host.first_seen }}</td>
+            <td>{{ host.last_seen }}</td>
+            {% if request_params.get('show_raw') %}
+                <td><pre>{{ host | tojson(indent=2) }}</pre></td>
+            {% endif %} 
+        </tr>
+    {% endfor %}
+</tbody>

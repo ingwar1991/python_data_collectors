@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Found hosts</title>
+    <style type="text/css">
+        pre {
+            max-height: 300px;
+            overflow: scroll;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hosts List</h1>
+
+    <hr/>
+
+    {% include "form/form.html" %}
+
+    <hr/>
+
+    <label>Total Found:</label>
+    {{ hosts | length }}
+
+    <hr/>
+
+    {% include "table/table.html" %}
+</body>
+</html>
+
