@@ -2,16 +2,19 @@ from abc import ABC, abstractmethod
 import yaml
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
-from .requester import NoAuthRequester, BasicAuthRequester, TokenAuthRequester, TokenBearerAuthRequester, OAuthRequester
+from .requester import BaseRequester, NoAuthRequester, BasicAuthRequester, TokenAuthRequester, TokenBearerAuthRequester, OAuthRequester
 from ..db.mongo import fix_dt_for_db
 from .hydrated.base_collection import BaseHydratedCollection
 
 
 class BaseCollector(ABC):
-    def __init__(self, config):
+    def __init__(self, config, rate_limit_data: Dict[str, Any] = None):
         self.config = config
+
+        self.__rate_limit_data = rate_limit_data if rate_limit_data is not None else {}
+        self.__requester = None
 
         base_config_path = Path(__file__).parent / 'config.yaml'
         with open(base_config_path, 'r') as f:
@@ -102,7 +105,7 @@ class BaseCollector(ABC):
     def _get_class_name(self) -> str:
         return self.__class__.__name__
 
-    def fetch_data(self, hydrated_request_params: Optional[Dict] = None) -> Dict:
+    def fetch_data(self, hydrated_request_params: Optional[Dict] = None) -> Dict[str, Any]:
         """
         Fetch data and return next_page_request_params.
 
@@ -119,6 +122,8 @@ class BaseCollector(ABC):
 
     def _request_data(self, request_params: Dict) -> Dict:
         """
+        Makes a request to vendor api and saves the result
+
         Returns Dictionary containing next_page_request_params.
         """
         raw_data = self._get_requester().request(
@@ -136,66 +141,109 @@ class BaseCollector(ABC):
     def _normalize_dt(self, dt_str: str) -> Optional[datetime]:
         return fix_dt_for_db(dt_str)
 
-    def _get_custom_requester(self) -> BasicAuthRequester:
+    def _get_custom_requester(self) -> BaseRequester:
         raise NotImplementedError(
             self._get_class_name() + ' has no get_custom_requester() implemented'
         )
 
-    def _get_requester(self) -> BasicAuthRequester:
-        match self.config['auth_type']:
-            case 'no_oauth':
-                return NoAuthRequester(
-                    self._get_base_url(),
-                    self._get_response_type(),
-                    self._get_timeout(),
-                )
+    def _create_rate_limiter_config(self) -> Dict[str, Any]:
+        """
+        Returns dict hydrated as RateLimiter config
+        """
+        config = {
+            "vendor_name": self._get_vendor_name(),
+            **self.config.get("rate_limit", {
+                "requests_allowed": -1,
+                "timeframe": 0
+            }),
+            **self.__rate_limit_data
+        }
 
-            case 'basic':
-                username = self.config.get('username')
-                password = self.config.get('password')
-                if username is None or password is None:
-                    raise KeyError(
-                        self._get_class_name() + ": missing username|password for basic auth_type"
+        return config
+
+    def get_rate_limiter_data(self) -> Dict[str, Any]:
+        """
+        Returns RateLimiter data (config + requests_done, started_at)
+        """
+        return self._get_requester().get_rate_limiter_data()
+
+    def _get_requester(self) -> BaseRequester:
+        if not self.__requester:
+            match self.config['auth_type']:
+                case 'no_oauth':
+                    self.__requester = NoAuthRequester(
+                        self._get_base_url(),
+                        self._get_response_type(),
+                        self._get_timeout(),
+                        self._create_rate_limiter_config()
                     )
 
-                return BasicAuthRequester(
-                    self._get_base_url(),
-                    self._get_response_type(),
-                    self._get_timeout(),
-                    username, password
-                )
+                case 'basic':
+                    username = self.config.get('username')
+                    password = self.config.get('password')
+                    if username is None or password is None:
+                        raise KeyError(
+                            self._get_class_name() + ": missing username|password for basic auth_type"
+                        )
 
-            case 'token_bearer' | 'token':
-                token = self.config.get('token')
-                if token is None:
-                    raise KeyError(
-                        self._get_class_name() + ": missing token for token|token_bearer auth_type"
+                    self.__requester = BasicAuthRequester(
+                        self._get_base_url(),
+                        self._get_response_type(),
+                        self._get_timeout(),
+                        self._create_rate_limiter_config(),
+                        username, password
                     )
 
-                return TokenAuthRequester(
-                    self._get_base_url(),
-                    self._get_response_type(),
-                    self._get_timeout(),
-                    token
-                )
+                case 'token':
+                    token = self.config.get('token')
+                    if token is None:
+                        raise KeyError(
+                            self._get_class_name() + ": missing token for token|token_bearer auth_type"
+                        )
 
-            case 'oauth':
-                token_url = self.config.get('token_url')
-                client_id = self.config.get('client_id')
-                client_secret = self.config.get('client_secret')
-                if token_url is None or client_id is None or client_secret is None:
-                    raise KeyError(
-                        self._get_class_name() + ": missing token_url|client_id|client_secret for oauth auth_type"
+                    self.__requester = TokenAuthRequester(
+                        self._get_base_url(),
+                        self._get_response_type(),
+                        self._get_timeout(),
+                        self._create_rate_limiter_config(),
+                        token
                     )
 
-                return OAuthRequester(
-                    self._get_base_url(),
-                    self._get_response_type(),
-                    self._get_timeout(),
-                    token_url,
-                    client_id, client_secret,
-                    self.config.get('scope')
-                )
+                case 'token_bearer':
+                    token = self.config.get('token')
+                    if token is None:
+                        raise KeyError(
+                            self._get_class_name() + ": missing token for token|token_bearer auth_type"
+                        )
 
-            case _:
-                return self._get_custom_requester()
+                    self.__requester = TokenBearerAuthRequester(
+                        self._get_base_url(),
+                        self._get_response_type(),
+                        self._get_timeout(),
+                        self._create_rate_limiter_config(),
+                        token
+                    )
+
+                case 'oauth':
+                    token_url = self.config.get('token_url')
+                    client_id = self.config.get('client_id')
+                    client_secret = self.config.get('client_secret')
+                    if token_url is None or client_id is None or client_secret is None:
+                        raise KeyError(
+                            self._get_class_name() + ": missing token_url|client_id|client_secret for oauth auth_type"
+                        )
+
+                    self.__requester = OAuthRequester(
+                        self._get_base_url(),
+                        self._get_response_type(),
+                        self._get_timeout(),
+                        self._create_rate_limiter_config(),
+                        token_url,
+                        client_id, client_secret,
+                        self.config.get('scope')
+                    )
+
+                case _:
+                    self.__requester = self._get_custom_requester()
+
+        return self.__requester

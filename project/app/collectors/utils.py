@@ -40,7 +40,8 @@ def read_yaml(filepath: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
     except yaml.YAMLError as e:
         raise ValueError(f"Failed to parse YAML file: {e}")
 
-def create_collector(collector_type: str) -> BaseCollector:
+
+def create_collector(collector_type: str, rate_limit_data: Dict[str, Any] = None) -> BaseCollector:
     collector_file = VENDORS_PATH / collector_type / 'collector.py'
     config_file = VENDORS_PATH / collector_type / 'config.yaml'
 
@@ -76,10 +77,7 @@ def create_collector(collector_type: str) -> BaseCollector:
 
         return None
 
-#    with open(config_file, 'r') as f:
-#        config = yaml.safe_load(f)
-
-    return CollectorClass(config)
+    return CollectorClass(config, rate_limit_data)
 
 
 def load_all_collectors() -> List[BaseCollector]:
@@ -90,7 +88,7 @@ def load_all_collectors() -> List[BaseCollector]:
             collector_instance = create_collector(vendor_dir.name)
             collectors.append(collector_instance)
         except Exception as e:
-            print(f"failed to build collector: {e}")
+            print(f"Failed to build collector: {e}")
             continue
 
     return collectors

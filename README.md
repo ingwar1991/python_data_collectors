@@ -26,14 +26,22 @@ The `config.yaml` file should look like this:
 
 ```yaml
 vendor_name: THE SAME AS DIR NAME 
-base_url: <BASE_URL, str> 
-endpoint: <ENDPOINT, str> 
-http_method: <HTTP_METHOD, str> 
+base_url: <str> 
+endpoint: <str> 
+http_method: <str> 
 response_type: json|xml|text 
-limit: <LIMIT, int> 
+limit: <int> 
 auth_type: no_auth|basic|token|token_bearer|oauth|custom
-dedup_before_insert: <DEDUP_BEFORE_INSERT, 0|1>
+dedup_before_insert: <0|1>
+rate_limit:
+  requests_allowed: <int> 
+  timeframe: <timeframe in seconds, int>
 ```
+
+#### Rate Limit 
+Defines the number of requests (`rate_limit.requests_allowed`) allowed within a given timeframe (`rate_limit.timeframe`, in seconds).
+
+* If `rate_limit.requests_allowed` is set to `-1`, there is no rate limit imposed, meaning requests are unlimited.
 
 #### Dedup Before Insert 
 Specifies where we should deduplicate collection with python (rather than DB) before trying to insert data.

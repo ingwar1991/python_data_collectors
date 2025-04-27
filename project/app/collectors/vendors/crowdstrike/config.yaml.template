@@ -4,3 +4,6 @@ endpoint: 'crowdstrike/hosts/get'
 http_method: post
 response_type: json 
 limit: 2 
+rate_limit:
+  requests_allowed: 2  
+  timeframe: 10

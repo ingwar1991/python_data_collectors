@@ -6,3 +6,5 @@ endpoint: 'qualys/hosts/get'
 http_method: post
 response_type: json 
 limit: 2 
+rate_limit:
+  requests_allowed: -1 
