@@ -75,6 +75,9 @@ class BaseCollector(ABC):
 
         return response_type
 
+    def _get_dedup_before_insert(self) -> bool:
+        return self.config.get('dedup_before_insert', 0) > 0
+
     @abstractmethod
     def _hydrate_request_params(self, data: Dict) -> Dict:
         """

@@ -5,9 +5,10 @@ from .base_entity import BaseHydratedEntity
 
 
 class BaseHydratedCollection(ABC):
-    def __init__(self, entities: list[BaseHydratedEntity]):
+    def __init__(self, entities: list[BaseHydratedEntity], dedup_before_insert: bool = False):
         self._entities = entities
 
+        self._dedup_before_insert = dedup_before_insert
         self._is_deduped = False
         self._dup_entities: list[BaseHydratedEntity] = []
 
@@ -18,12 +19,22 @@ class BaseHydratedCollection(ABC):
         pass
 
     @abstractmethod
-    def _get_existing_unique_ids_from_db(self) -> List[str]:
+    def _set_into_db(self):
         pass
 
-    @abstractmethod
+    # the next 3 methods will be required
+    # only if dedup_before_insert will be in place
+    # thus instead of making them abstract they are just empty
+    # in order not to force to create unused methods
+
+    def _get_existing_unique_ids_from_db(self) -> List[str]:
+        return []
+
     def _insert_new_in_db(self):
-        pass
+        return
+
+    def _update_existing_in_db(self):
+        return
 
     def len(self) -> int:
         return len(self._entities)
@@ -31,12 +42,10 @@ class BaseHydratedCollection(ABC):
     def dup_len(self) -> int:
         return len(self._dup_entities)
 
-    # some cases won't need that at all
-    # thus the method is empty instead of abstract
-    def _update_existing_in_db(self):
-        return
-
     def save_to_db(self):
+        if not self._dedup_before_insert:
+            return self._set_into_db()
+
         self._dedup()
 
         self._insert_new_in_db()

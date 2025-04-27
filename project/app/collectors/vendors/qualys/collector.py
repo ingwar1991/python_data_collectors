@@ -35,7 +35,10 @@ class Collector(BaseCollector):
                 raw_host
             ))
 
-        return HydratedHostsCollection(hostsList)
+        return HydratedHostsCollection(
+            hostsList,
+            self._get_dedup_before_insert()
+        )
 
     def __get_mac_addr(self, raw_data: Dict) -> str:
         mac_addr = next(

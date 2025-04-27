@@ -26,12 +26,40 @@ The `config.yaml` file should look like this:
 
 ```yaml
 vendor_name: THE SAME AS DIR NAME 
-base_url: <BASE_URL> 
-endpoint: <ENDPOINT> 
-http_method: <HTTP_METHOD> 
+base_url: <BASE_URL, str> 
+endpoint: <ENDPOINT, str> 
+http_method: <HTTP_METHOD, str> 
 response_type: json|xml|text 
-limit: <LIMIT> 
+limit: <LIMIT, int> 
 auth_type: no_auth|basic|token|token_bearer|oauth|custom
+dedup_before_insert: <DEDUP_BEFORE_INSERT, 0|1>
+```
+
+#### Dedup Before Insert 
+Specifies where we should deduplicate collection with python (rather than DB) before trying to insert data.
+If so, then:
+1. search for existing entries by unique_id
+```python
+def _get_existing_unique_ids_from_db(self) -> List[str]:
+```
+
+2. insert new entries
+```python
+def _insert_new_in_db(self):
+```
+
+3. update existing entries
+```python
+def _update_existing_in_db(self):
+```
+
+* **Default** is False (0)
+
+If is false, then deduplication is supposed to be done withing DB
+```python
+    @abstractmethod
+    def _set_into_db(self):
+        pass
 ```
 
 #### Authentication Configuration

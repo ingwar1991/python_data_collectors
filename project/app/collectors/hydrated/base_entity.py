@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import inspect
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 class BaseHydratedEntity(ABC):
@@ -14,8 +14,14 @@ class BaseHydratedEntity(ABC):
     def _generate_unique_id(self) -> str:
         pass
 
-    def to_dict(self) -> Dict:
-        return self.__dict__
+    def _sanitize_raw_data(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+        return raw_data
+
+    def to_dict(self) -> Dict[str, Any]:
+        entDict = self.__dict__
+        entDict["raw_data"] = self._sanitize_raw_data(entDict)
+
+        return entDict
 
     def _get_class_name(self) -> str:
         return self.__class__.__name__
