@@ -14,8 +14,9 @@ class TokenBearerAuthRequester(BaseRequester):
 
         self.__token = token
 
-    def authenticate(self):
-        self._session.headers.update({
+    async def authenticate(self):
+        current_session = await self._get_session()
+        current_session.headers.update({
             'Authorization': f'Bearer {self.__token}'
         })
 

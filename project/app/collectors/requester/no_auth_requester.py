@@ -11,5 +11,5 @@ class NoAuthRequester(BaseRequester):
     ):
         super().__init__(base_url, response_type, timeout_in_seconds, rate_limit_config)
 
-    def authenticate(self):
+    async def authenticate(self):
         return

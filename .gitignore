@@ -5,5 +5,5 @@ __pycache__/
 *.yaml
 *.env
 
-# dirs starting with _
-_*/
+# dirs & files starting with _
+_*

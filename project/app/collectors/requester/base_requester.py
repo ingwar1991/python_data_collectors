@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-import requests
+import asyncio
+import aiohttp
 from requests.models import Response
-from typing import Union, Dict, List, Any
+from typing import Union, Dict, List, Any, Optional
 import xml.etree.ElementTree as ET
-import time
 
 from .rate_limiter import RateLimitLimitReachedException, RateLimiter
 
@@ -18,54 +18,78 @@ class BaseRequester(ABC):
         self._response_type = response_type
         self._timeout = timeout_in_seconds
 
-        self._session = requests.Session()
+        self._session: Optional[aiohttp.ClientSession] = None
         self._authenticated = False
 
         self._rate_limiter = RateLimiter(**rate_limit_config)
 
+    async def _create_session(self):
+        timeout = aiohttp.ClientTimeout(total=self._timeout)
+        self._session = aiohttp.ClientSession(timeout=timeout)
+
+    async def _get_session(self):
+        if self._session is None:
+            await self._create_session()
+
+        return self._session
+
+    async def close_session(self):
+        if self._session is not None:
+            await self._session.close()
+
     @abstractmethod
-    def authenticate(self):
+    async def authenticate(self):
         pass
 
     def get_rate_limiter_data(self):
         return self._rate_limiter.to_dict()
 
-    def request(self, endpoint, method='GET', data=None):
+    async def request(self, endpoint, method='GET', data=None):
         if not self._authenticated:
-            self.authenticate()
+            await self.authenticate()
 
         try:
             self._rate_limiter.check()
         except RateLimitLimitReachedException as e:
             # rate limit achieved, sleeping till the next timeframe starts
             print(f"Rate limit reached: {e}")
-            time.sleep(e.seconds_until_next_timeframe())
+            await asyncio.sleep(e.seconds_until_next_timeframe())
             print("Waked up from waiting for the next rate limit timeframe")
 
         url = f"{self._base_url}/{endpoint.lstrip('/')}"
         method = method.upper()
 
         try:
+            current_session = await self._get_session()
+
             if method == 'GET':
-                response = self._session.get(url, params=data, timeout=self._timeout)
+                async with current_session.get(url, params=data) as response:
+                    response.raise_for_status()
+
+                    return await self.parse_response(response)
+
             elif method == 'POST':
-                response = self._session.post(url, params=data, timeout=self._timeout)
+                async with current_session.post(url, params=data) as response:
+                    response.raise_for_status()
+
+                    return await self.parse_response(response)
+
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
-            response.raise_for_status()
+        except aiohttp.ClientResponseError as e:
+            print(f"Request error: status_code={e.status}, message={e.message}")
 
-            return self.parse_response(response)
+        except aiohttp.ClientError as e:
+            print(f"Request failed: {e}")
 
-        except requests.RequestException as e:
-            print(f"Request error: status_code={response.status_code}, response_text={response.text}, error={e}")
-            return None
+        return None
 
-    def parse_response(self, response: Response) -> Union[Dict, List, str, ET.Element, ET.ElementTree]:
+    async def parse_response(self, response: Response) -> Union[Dict, List, str, ET.Element, ET.ElementTree]:
         match self._response_type:
             case 'json':
-                return response.json()
+                return await response.json()
             case 'xml':
-                return response.xml()
+                return await response.xml()
             case _:
-                return response.text()
+                return await response.text()

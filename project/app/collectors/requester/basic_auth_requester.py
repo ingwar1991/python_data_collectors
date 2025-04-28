@@ -1,4 +1,4 @@
-from requests.auth import HTTPBasicAuth
+import aiohttp
 from typing import Dict, Any
 
 from .base_requester import BaseRequester
@@ -16,6 +16,8 @@ class BasicAuthRequester(BaseRequester):
         self.__username = username
         self.__password = password
 
-    def authenticate(self):
-        self._session.auth = HTTPBasicAuth(self.__username, self.__password)
+    async def authenticate(self):
+        current_session = await self._get_session()
+        current_session.auth = aiohttp.BasicAuth(self.__username, self.__password)
+
         self.authenticated = True

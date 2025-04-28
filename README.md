@@ -9,6 +9,29 @@ This approach optimizes the data collection process by parallelizing the API cal
 By splitting the process into independent jobs and eliminating the need to wait for API responses within each job, 
 the system is able to significantly reduce the overall processing time, addressing the common bottleneck of waiting for 3rd-party API responses.
 
+## Base `config.yaml` Contents
+
+The `app/collectors/config.yaml` file is used for controlling base configuration and should look like this:
+
+```yaml
+limit: <int>
+timeout: <int, in seconds>
+scheduler_tf: <int, in minutes>
+worker_concurrency: <int>
+```
+
+- **`limit`**: *(int)*  
+  The default number of requests allowed per API (rate limit). Used if no specific limit is provided.
+
+- **`timeout`**: *(int, in seconds)*  
+  The default timeout duration for API requests.
+
+- **`scheduler_tf`**: *(int, in minutes)*  
+  Time interval between each new round of job scheduling. Determines how often jobs are picked up and dispatched.
+
+- **`worker_concurrency`**: *(int)*  
+  The number of Celery worker threads or processes running **spawned from a single `worker.py` process**. 
+
 ## Adding a New Vendor
 
 To add a new vendor, you need to create a folder with the vendor's name under the `project/app/collectors/vendors` directory.
@@ -48,17 +71,17 @@ Specifies where we should deduplicate collection with python (rather than DB) be
 If so, then:
 1. search for existing entries by unique_id
 ```python
-def _get_existing_unique_ids_from_db(self) -> List[str]:
+async def _get_existing_unique_ids_from_db(self) -> List[str]:
 ```
 
 2. insert new entries
 ```python
-def _insert_new_in_db(self):
+async def _insert_new_in_db(self):
 ```
 
 3. update existing entries
 ```python
-def _update_existing_in_db(self):
+async def _update_existing_in_db(self):
 ```
 
 * **Default** is False (0)
@@ -66,7 +89,7 @@ def _update_existing_in_db(self):
 If is false, then deduplication is supposed to be done withing DB
 ```python
     @abstractmethod
-    def _set_into_db(self):
+    async def _set_into_db(self):
         pass
 ```
 
@@ -101,7 +124,7 @@ This **Requester** should inherit from `project/app/requester/BaseRequester` and
 
 ```python
 @abstractmethod
-def authenticate(self):
+async def authenticate(self):
     pass
 ```
 
@@ -176,14 +199,14 @@ def _get_db_conn(self):
 2. `get_existing_unique_ids_from_db(self) -> List[str]`
 ```python
 @abstractmethod
-def _get_existing_unique_ids_from_db(self) -> List[str]:
+async def _get_existing_unique_ids_from_db(self) -> List[str]:
     pass
 ```
 
 3. `_insert_new_in_db(self)`
 ```python
 @abstractmethod
-def _insert_new_in_db(self):
+async def _insert_new_in_db(self):
     pass
 ```
 

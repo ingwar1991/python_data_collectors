@@ -3,55 +3,62 @@ from pymongo.errors import BulkWriteError
 from typing import List, Dict, Any
 
 from ..base_collection import BaseHydratedCollection
-from ....db.mongo import get_db_conn
+# from ....db.mongo import get_db_conn
+from ....db.async_mongo import get_db_conn
 
 
 class HydratedHostsCollection(BaseHydratedCollection):
-    def _get_db_conn(self):
+    def _create_db_conn(self):
         return get_db_conn().hostsDiscovered
 
-    def _set_into_db(self):
-        self.__update_or_upsert_into_db(self._entities, True)
+    async def _set_into_db(self):
+        await self.__update_or_upsert_into_db(self._entities, True)
 
         return
 
-    def _update_existing_in_db(self):
+    async def _update_existing_in_db(self):
         if not self.dup_len():
             return
 
-        result = self.__update_or_upsert_into_db(self._dup_entities, False)
+        result = await self.__update_or_upsert_into_db(self._dup_entities, False)
+        if result is None:
+            raise RuntimeError(f"Failed to run update_existing query: {result} for {self._dup_entities}")
         if result.matched_count == 0:
             raise RuntimeError("No matching documents found for update.")
 
         return
 
-    def _get_existing_unique_ids_from_db(self) -> List[str]:
+    async def _get_existing_unique_ids_from_db(self) -> List[str]:
         unique_ids = [entity.unique_id for entity in self._entities]
-        cursor = self._db_conn.find(
+        cursor = self._get_db_conn().find(
             {"unique_id": {"$in": unique_ids}},
             {"unique_id": 1, "_id": 0}
         )
 
-        return [entity["unique_id"] for entity in cursor]
+        existing_ids = []
+        async for doc in cursor:
+            existing_ids.append(doc["unique_id"])
 
-    def _insert_new_in_db(self):
+        return existing_ids
+
+    async def _insert_new_in_db(self):
         if not self.len():
             return
 
         docs = [entity.to_dict() for entity in self._entities]
         try:
-            result = self._db_conn.insert_many(docs, ordered=False)
+            result = await self._get_db_conn().insert_many(docs, ordered=False)
             if not result.acknowledged:
                 raise RuntimeError("Insert not acknowledged by MongoDB")
         except BulkWriteError as err:
             raise RuntimeError(f"Bulk insert error: {err.details}")
 
-    def __update_or_upsert_into_db(self, entities: List[Dict[str, Any]], upsert: bool):
+    async def __update_or_upsert_into_db(self, entities: List[Dict[str, Any]], upsert: bool):
         if not len(entities):
             return
 
         update_operations = []
-        for entity in self._entities:
+        for entity in entities:
             entityDict = entity.to_dict()
 
             update_operations.append(
@@ -91,8 +98,8 @@ class HydratedHostsCollection(BaseHydratedCollection):
                 )
             )
 
-        try:
-            if update_operations:
-                return self._db_conn.bulk_write(update_operations, ordered=False)
-        except BulkWriteError as err:
-            raise RuntimeError(f"Bulk update operation failed: {err.details}")
+        if update_operations:
+            try:
+                return await self._get_db_conn().bulk_write(update_operations, ordered=False)
+            except BulkWriteError as err:
+                raise RuntimeError(f"Bulk update operation failed: {err.details}")

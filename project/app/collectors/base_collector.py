@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 
 from .requester import BaseRequester, NoAuthRequester, BasicAuthRequester, TokenAuthRequester, TokenBearerAuthRequester, OAuthRequester
-from ..db.mongo import fix_dt_for_db
+from ..db.async_mongo import fix_dt_for_db
 from .hydrated.base_collection import BaseHydratedCollection
 
 
@@ -105,7 +105,7 @@ class BaseCollector(ABC):
     def _get_class_name(self) -> str:
         return self.__class__.__name__
 
-    def fetch_data(self, hydrated_request_params: Optional[Dict] = None) -> Dict[str, Any]:
+    async def fetch_data(self, hydrated_request_params: Optional[Dict] = None) -> Dict[str, Any]:
         """
         Fetch data and return next_page_request_params.
 
@@ -118,15 +118,15 @@ class BaseCollector(ABC):
                 'offset': 0,
             })
 
-        return self._request_data(hydrated_request_params)
+        return await self._request_data(hydrated_request_params)
 
-    def _request_data(self, request_params: Dict) -> Dict:
+    async def _request_data(self, request_params: Dict) -> Dict:
         """
         Makes a request to vendor api and saves the result
 
         Returns Dictionary containing next_page_request_params.
         """
-        raw_data = self._get_requester().request(
+        raw_data = await self._get_requester().request(
             self.config['endpoint'],
             self.config.get('http_method', 'GET'),
             request_params,
@@ -134,7 +134,8 @@ class BaseCollector(ABC):
         if not raw_data:
             return None
 
-        self._hydrate(raw_data).save_to_db()
+        hydratedCollection = self._hydrate(raw_data)
+        await hydratedCollection.save_to_db()
 
         return self._paginate(request_params, raw_data)
 
@@ -170,7 +171,7 @@ class BaseCollector(ABC):
     def _get_requester(self) -> BaseRequester:
         if not self.__requester:
             match self.config['auth_type']:
-                case 'no_oauth':
+                case 'no_auth':
                     self.__requester = NoAuthRequester(
                         self._get_base_url(),
                         self._get_response_type(),
@@ -247,3 +248,6 @@ class BaseCollector(ABC):
                     self.__requester = self._get_custom_requester()
 
         return self.__requester
+
+    async def close_requester_session(self):
+        return await self._get_requester().close_session()
